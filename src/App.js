@@ -2,19 +2,16 @@ import React from 'react'
 import * as BooksAPI from './BooksAPI'
 import './App.css'
 import Bookshelf from './Bookshelf';
+import Book from './Book';
 import { Link, Route } from "react-router-dom";
+import SearchComponent from './SearchComponent';
 
 
 class BooksApp extends React.Component {
   state = {
-    /**
-     * TODO: Instead of using this state variable to keep track of which page
-     * we're on, use the URL in the browser's address bar. This will ensure that
-     * users can use the browser's back and forward buttons to navigate between
-     * pages, as well as provide a good URL they can bookmark and share.
-     */
     shelfs: [],
-    books: []
+    books: [],
+    queryBooks: []
   }
 
   componentDidMount(){
@@ -39,8 +36,8 @@ class BooksApp extends React.Component {
     });
   }
 
+
   changeBookShelf = (shelf, book) => {
-    
     // update API
     BooksAPI.update(book, shelf);
 
@@ -48,9 +45,10 @@ class BooksApp extends React.Component {
     const tmpBook = this.state.books;
 
     const bookIdx = tmpBook.findIndex(b => b.id === book.id);
-    tmpBook[bookIdx].shelf = shelf;
-
-    this.setState({books: tmpBook})
+    if(bookIdx>=0){
+      tmpBook[bookIdx].shelf = shelf;  
+      this.setState({books: tmpBook})
+    }
   }
 
   render() {
@@ -59,22 +57,52 @@ class BooksApp extends React.Component {
         <Route path='/search' render={({history}) => (
           <div className="search-books">
             <div className="search-books-bar">
-              <Link className="close-search" to='/' onClick={() => {history.push('/search')}}>Close</Link>
-              <div className="search-books-input-wrapper">
-                {/*
-                  NOTES: The search from BooksAPI is limited to a particular set of search terms.
-                  You can find these search terms here:
-                  https://github.com/udacity/reactnd-project-myreads-starter/blob/master/SEARCH_TERMS.md
+              <Link className="close-search" to='/' onClick={() => {history.push('/search'); this.getAllBooks();}}>Close</Link>
+              <SearchComponent onInputChange={(searchTerm) => {
+                if(searchTerm != null && searchTerm.length > 0){
+                  BooksAPI.search(searchTerm).then((books) => {
 
-                  However, remember that the BooksAPI.search method DOES search by title or author. So, don't worry if
-                  you don't find a specific author or title. Every search is limited by search terms.
-                */}
-                <input type="text" placeholder="Search by title or author"/>
+                    if(books.error){
+                      this.setState(() => ({queryBooks: []}));
+                      return;
+                    }
 
-              </div>
+                    const tmpBookState = this.state.books;
+                    var searchedBooks = books.map((qb) => {
+                      const tmpBook = qb;
+                      
+                      const tmp = tmpBookState.find(bs => bs.id === qb.id);
+
+                      tmpBook.shelf = tmp ? tmp.shelf : 'none';
+
+                      return tmpBook;
+                    })
+            
+                    this.setState(() => ({queryBooks: searchedBooks.filter(b => b.imageLinks)}));
+            
+                  });
+                }
+                else {
+                  this.setState(() => ({queryBooks: []}));
+                }
+              }}/>
             </div>
             <div className="search-books-results">
-              <ol className="books-grid"></ol>
+              <ol className="books-grid">
+              {this.state.queryBooks && this.state.queryBooks.length > 0 ?
+                  this.state.queryBooks.map((book) => {
+                      return(
+                        
+                        
+                      <li key={book.id}>
+                          <Book book={book} onChangeBookshelf={this.changeBookShelf}/>
+                      </li>
+                      )
+                  })
+                  :
+                  <p style={{color: '#CCC'}}>No Results</p>
+                }
+              </ol>
             </div>
           </div>
         )} />
@@ -98,7 +126,7 @@ class BooksApp extends React.Component {
             </div>
             <div className="open-search">
               <Link to='/search'>
-                <button onClick={() =>{ history.push('/')}}>Add a book</button>
+                <button onClick={() =>{ history.push('/');}}>Add a book</button>
               </Link>
             </div>
           </div>

@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import * as BooksAPI from './BooksAPI'
 
 
 class Book extends Component {
@@ -26,7 +25,9 @@ class Book extends Component {
                     </div>
                 </div>
                 <div className="book-title">{book.title}</div>
-                <div className="book-authors">{book.authors.join(', ')}</div>
+                {book.authors &&
+                    <div className="book-authors">{book.authors.join(', ')}</div>
+                }
             </div>
         );
     }
